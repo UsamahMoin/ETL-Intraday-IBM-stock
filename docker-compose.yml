@@ -1,0 +1,69 @@
+version: '3'
+services:
+  zookeeper:
+    image: confluentinc/cp-zookeeper:latest
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    ports:
+      - "2181:2181"
+
+  kafka:
+    image: confluentinc/cp-kafka:latest
+    depends_on:
+      - zookeeper
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+    ports:
+      - "9092:9092"
+
+  spark:
+    image: bitnami/spark:latest
+    environment:
+      SPARK_MODE: master
+    ports:
+      - "7077:7077"
+      - "8081:8080"
+
+  airflow-webserver:
+    image: apache/airflow:2.1.0
+    depends_on:
+      - postgres
+    environment:
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__CORE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
+      AIRFLOW__CORE__FERNET_KEY: jsDPRErfWx0kQxK4QGL1jNoQBkwd3C0RqQvOpKq1VuiC
+      AIRFLOW__WEBSERVER__SECRET_KEY: bdlxsVJiCSqHm3FKojoEj1QvOpKq1VuiC
+    ports:
+      - "8082:8080"
+    command: "webserver"
+
+  airflow-scheduler:
+    image: apache/airflow:2.1.0
+    depends_on:
+      - postgres
+    environment:
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__CORE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
+      AIRFLOW__CORE__FERNET_KEY: jsDPRErfWx0kQxK4QGL1jNoQBkwd3C0RqQvOpKq1VuiC
+      AIRFLOW__WEBSERVER__SECRET_KEY: bdlxsVJiCSqHm3FKojoEj1QvOpKq1VuiC
+    command: "scheduler"
+
+  postgres:
+    image: postgres:13
+    environment:
+      POSTGRES_USER: airflow
+      POSTGRES_PASSWORD: airflow
+      POSTGRES_DB: airflow
+    ports:
+      - "5432:5432"
+  
+  metabase:
+    image: metabase/metabase
+    ports:
+      - "3000:3000"
